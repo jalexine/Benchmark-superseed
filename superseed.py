@@ -20,7 +20,6 @@ if len(sys.argv) != 3:
 
 fastapath, n = sys.argv[1], int(sys.argv[2])
 
-# Construire le chemin du fichier de sortie avec le nom du fichier d'entrée
 input_name = os.path.splitext(os.path.basename(fastapath))[0]
 output_path = f'{input_name}_SD.fasta'
 

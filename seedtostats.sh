@@ -24,13 +24,13 @@ SD_DBG_FILE="${ORIGINAL_FASTA%.*}_SDBG${K_VALUE}_N${N_VALUE}.lz4"
 DBG_FILE="${ORIGINAL_FASTA%.*}_DBG${K_VALUE}.lz4"
 
 if [ ! -e "$DBG_FILE" ]; then
-  ggcat build --eulertigs -k "$K_VALUE" -j 8 -s 1 "$ORIGINAL_FASTA" -o "$DBG_FILE"
+  ggcat build --generate-maximal-unitigs-links  -k "$K_VALUE" -j 8 -s 2 "$ORIGINAL_FASTA" -o "$DBG_FILE"
   lz4cat "$DBG_FILE" > "${ORIGINAL_FASTA%.*}_DBG${K_VALUE}"
   seqkit stats "${ORIGINAL_FASTA%.*}_DBG${K_VALUE}" >> "${ORIGINAL_FASTA%.*}_combined_stats.txt"
 fi
 
 ./superseed.py "$ORIGINAL_FASTA" "$N_VALUE"
-ggcat build --eulertigs -k "$K_VALUE" -j 8 -s 1 "$SD_FASTA" -o "$SD_DBG_FILE"
+ggcat build --generate-maximal-unitigs-links -k "$K_VALUE" -j 8 -s 2 "$SD_FASTA" -o "$SD_DBG_FILE"
 lz4cat "$SD_DBG_FILE" > "${ORIGINAL_FASTA%.*}_SDBG${K_VALUE}_N${N_VALUE}"
 seqkit stats "${ORIGINAL_FASTA%.*}_SDBG${K_VALUE}_N${N_VALUE}" >> "${ORIGINAL_FASTA%.*}_stats.txt"
 
