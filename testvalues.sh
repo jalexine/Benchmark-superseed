@@ -3,7 +3,7 @@
 SCRIPT="./seedtostats.sh"
 
 if [ "$#" -ne 1 ]; then
-    echo -e "\033[95m♡Pls use: $0 -k <valeur_k> -n <valeur_n> <original.fasta>\033[0m"
+    echo -e "\033[95m♡Pls use: $0 <original.fasta>\033[0m"
     exit 1
 fi
 
