@@ -8,7 +8,6 @@ if [ "$#" -ne 1 ]; then
 fi
 
 FASTA_FILE="$1"
-ORIGINAL_FASTA="$FASTA_FILE"
 
 for K_VALUE in 21 31 41 51 61; do
     for N_VALUE in {2..10}; do
