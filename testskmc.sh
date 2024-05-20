@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$#" -ne 1 ]; then
+    echo -e "\033[95m♡Pls use: $0 <original.fasta>\033[0m"
+    exit 1
+fi
+
 fastapath="$1"
 input_name="$(basename -- "$fastapath" .fa)"
 
