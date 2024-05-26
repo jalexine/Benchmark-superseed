@@ -1,0 +1,11 @@
+Summary of KMC output line counts:
+ 4486677 output/data/kmcoutput_ecoli_ecoli2_N2.txt
+ 4484950 output/data/kmcoutput_ecoli_ecoli2_N3.txt
+ 4492262 output/data/kmcoutput_ecoli_ecoli2_N4.txt
+ 4494734 output/data/kmcoutput_ecoli_ecoli2_N5.txt
+ 4492950 output/data/kmcoutput_ecoli_ecoli2_N6.txt
+ 4498454 output/data/kmcoutput_ecoli_ecoli2_N7.txt
+ 4500022 output/data/kmcoutput_ecoli_ecoli2_N8.txt
+ 4498497 output/data/kmcoutput_ecoli_ecoli2_N9.txt
+ 4503131 output/data/kmcoutput_ecoli_ecoli2_N10.txt
+ 4480379 output/data/kmcoutput_ecoli_ecoli2.txt
