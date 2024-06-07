@@ -1,6 +1,5 @@
 import yaml
 
-# Load config file
 config = yaml.safe_load(open("config.yaml"))
 
 fasta1 = config["fasta1"]
@@ -10,7 +9,13 @@ output_dir = "output/data"
 
 rule all:
     input:
-        "summary_plot.png"
+        expand(f"{output_dir}/{{fasta1}}_N{{n}}.fa", fasta1=fasta1, n=n_values),
+        expand(f"{output_dir}/{{fasta2}}_N{{n}}.fa", fasta2=fasta2, n=n_values),
+        "summary.txt",
+        f"{output_dir}/{fasta1}_stats.txt",
+        f"{output_dir}/{fasta2}_stats.txt",
+        f"output/plots/{fasta1}_sum_len_plot.png",
+        f"output/plots/{fasta2}_sum_len_plot.png"
 
 rule generate_seeds:
     input:
@@ -81,8 +86,6 @@ rule generate_summary:
         for file in {input}; do
             wc -l $file >> {output}
         done
-        rm -r {output_dir}
-        rmdir output  # Remove the output directory if it's empty
         """
 
 rule plot_summary:
@@ -94,3 +97,52 @@ rule plot_summary:
         "environment.yml"
     script:
         "plot_summary.py"
+
+rule run_ggcat_fasta1:
+    input:
+        fasta=[f"data/{fasta1}.fa"] + expand(f"{output_dir}/{{fasta}}_N{{n}}.fa", fasta=fasta1, n=n_values)
+    output:
+        stats=f"{output_dir}/{fasta1}_stats.txt"
+    params:
+        k_value=31
+    conda:
+        "environment.yml"
+    shell:
+        """
+        > {output.stats}
+        for fasta in {input.fasta}; do
+            ./ggcat.sh {params.k_value} $fasta {output.stats}
+        done
+        """
+
+rule run_ggcat_fasta2:
+    input:
+        fasta=[f"data/{fasta2}.fa"] + expand(f"{output_dir}/{{fasta}}_N{{n}}.fa", fasta=fasta2, n=n_values)
+    output:
+        stats=f"{output_dir}/{fasta2}_stats.txt"
+    params:
+        k_value=31
+    conda:
+        "environment.yml"
+    shell:
+        """
+        > {output.stats}
+        for fasta in {input.fasta}; do
+            ./ggcat.sh {params.k_value} $fasta {output.stats}
+        done
+        """
+
+rule plot_stats_sum_len:
+    input:
+        stats1=f"{output_dir}/{fasta1}_stats.txt",
+        stats2=f"{output_dir}/{fasta2}_stats.txt"
+    output:
+        f"output/plots/{fasta1}_sum_len_plot.png",
+        f"output/plots/{fasta2}_sum_len_plot.png"
+    conda:
+        "environment.yml"
+    shell:
+        """
+        python plotggcat.py {input.stats1} {input.stats2} output/plots
+        """
+
