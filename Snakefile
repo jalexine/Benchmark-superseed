@@ -11,11 +11,10 @@ rule all:
     input:
         expand(f"{output_dir}/{{fasta1}}_N{{n}}.fa", fasta1=fasta1, n=n_values),
         expand(f"{output_dir}/{{fasta2}}_N{{n}}.fa", fasta2=fasta2, n=n_values),
-        "summary.txt",
-        f"{output_dir}/{fasta1}_stats.txt",
-        f"{output_dir}/{fasta2}_stats.txt",
         f"output/plots/{fasta1}_sum_len_plot.png",
-        f"output/plots/{fasta2}_sum_len_plot.png"
+        f"output/plots/{fasta2}_sum_len_plot.png",
+        f"summary_{fasta1}_{fasta2}.txt",
+        f"output/plots/commonkmer_{fasta1}_{fasta2}_plot.png"
 
 rule generate_seeds:
     input:
@@ -74,10 +73,10 @@ rule process_kmc_original:
 
 rule generate_summary:
     input:
+        f"output/data/kmcoutput_{fasta1}_{fasta2}.txt",  # Ajoutez manuellement cette entrée
         expand(f"{output_dir}/kmcoutput_{{fasta1}}_{{fasta2}}_N{{n}}.txt", fasta1=fasta1, fasta2=fasta2, n=n_values),
-        f"{output_dir}/kmcoutput_{fasta1}_{fasta2}.txt"
     output:
-        "summary.txt"
+        f"summary_{fasta1}_{fasta2}.txt"
     conda:
         "environment.yml"
     shell:
@@ -90,13 +89,15 @@ rule generate_summary:
 
 rule plot_summary:
     input:
-        "summary.txt"
+        summary=f"summary_{fasta1}_{fasta2}.txt"
     output:
-        "summary_plot.png"
+        plot=f"output/plots/commonkmer_{fasta1}_{fasta2}_plot.png"
     conda:
         "environment.yml"
-    script:
-        "plot_summary.py"
+    shell:
+        "python plot_commonkmer.py {input.summary} {output.plot}"
+
+
 
 rule run_ggcat_fasta1:
     input:
