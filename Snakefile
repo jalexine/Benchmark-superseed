@@ -14,7 +14,7 @@ rule all:
         f"output/plots/{fasta1}_sum_len_plot.png",
         f"output/plots/{fasta2}_sum_len_plot.png",
         f"summary_{fasta1}_{fasta2}.txt",
-        f"output/plots/commonkmer_{fasta1}_{fasta2}_plot.png"
+        f"output/plots/{fasta1}_{fasta2}_commonkmer_plot.png"
 
 rule generate_seeds:
     input:
@@ -91,7 +91,7 @@ rule plot_summary:
     input:
         summary=f"summary_{fasta1}_{fasta2}.txt"
     output:
-        plot=f"output/plots/commonkmer_{fasta1}_{fasta2}_plot.png"
+        plot=f"output/plots/{fasta1}_{fasta2}_commonkmer_plot.png"
     conda:
         "environment.yml"
     shell:
