@@ -17,10 +17,9 @@ def read_data(filename):
 
 def plot_sum_len(df, fasta_name, output_file):
     plt.figure(figsize=(10, 6))
-    plt.plot(df['N'], df['sum_len'], marker='', linestyle='-', color='#FF69B4')  # No marker for the first point
-    plt.plot(df['N'][1:], df['sum_len'][1:], marker='o', linestyle='-', color='#FF69B4')  # Markers for the rest
+    plt.plot(df['N'], df['sum_len'], marker='', linestyle='-', color='#FF69B4') 
+    plt.plot(df['N'][1:], df['sum_len'][1:], marker='o', linestyle='-', color='#FF69B4')  
     
-    # Add horizontal reference line at sum_len value of the first point (N=1) in purple
     plt.axhline(y=df['sum_len'][0], color='purple', linestyle='--', label='Reference Line at N=1')
     
     plt.xlabel('N')
@@ -28,27 +27,25 @@ def plot_sum_len(df, fasta_name, output_file):
     plt.title(f'Total Sequence Length (sum_len) Across Different N for the {fasta_name} Samples')
     plt.grid(True)
     plt.xticks(df['N'])
-    plt.xlim(0, len(df) + 0)
+    plt.xlim(1, len(df) + 0)
     plt.legend()
     plt.savefig(output_file)
     plt.close()
 
-def main(fasta1_stats_file, fasta2_stats_file, output_dir):
-    df1 = read_data(fasta1_stats_file)
-    df2 = read_data(fasta2_stats_file)
+def main(fasta_stats_file, output_dir):
+    df = read_data(fasta_stats_file)
+    fasta_name = os.path.splitext(os.path.basename(fasta_stats_file))[0]
 
-    plot_sum_len(df1, "ecoli", os.path.join(output_dir, 'ecoli_sum_len_plot.png'))
-    plot_sum_len(df2, "ecoli2", os.path.join(output_dir, 'ecoli2_sum_len_plot.png'))
+    plot_sum_len(df, fasta_name, os.path.join(output_dir, f'{fasta_name}_sum_len_plot.png'))
 
 if __name__ == '__main__':
     import sys
-    if len(sys.argv) != 4:
-        print("Usage: python plotggcat.py <fasta1_stats_file> <fasta2_stats_file> <output_dir>")
+    if len(sys.argv) != 3:
+        print("Usage: python plotggcat.py <fasta_stats_file> <output_dir>")
         sys.exit(1)
 
-    fasta1_stats_file = sys.argv[1]
-    fasta2_stats_file = sys.argv[2]
-    output_dir = sys.argv[3]
+    fasta_stats_file = sys.argv[1]
+    output_dir = sys.argv[2]
 
     os.makedirs(output_dir, exist_ok=True)
-    main(fasta1_stats_file, fasta2_stats_file, output_dir)
+    main(fasta_stats_file, output_dir)
