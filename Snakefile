@@ -11,8 +11,7 @@ output_dir = "output/data"
 
 rule all:
     input:
-        expand(f"{output_dir}/{{fasta}}_sum_len_plot.png", fasta=FASTA_LIST)
-
+        expand(f"{output_dir}/repeatedkmer_{{fasta}}.txt", fasta=FASTA_LIST)
 rule superseeds:
     input:
         fasta="data/{fasta}.fa"
@@ -105,10 +104,9 @@ rule plot_sumlen_ggcat:
 
 rule kmc_repeatedkmer:
     input:
-        [f"data/{fasta1}.fa", f"data/{fasta2}.fa"]+ expand(f"{output_dir}/{{fasta}}_N{{n}}.fa", fasta=[fasta1, fasta2], n=n_values) 
+        fasta=[f"data/{{fasta}}.fa"] + expand(f"{output_dir}/{{fasta}}_N{{n}}.fa", fasta="{fasta}", n=n_values)
     output:
-        f"{output_dir}/repeatedkmer_{fasta1}.txt",
-        f"{output_dir}/repeatedkmer_{fasta2}.txt"
+        stats=f"{output_dir}/repeatedkmer_{{fasta}}.txt"
     params:
         kmc_path="./KMC3.2/bin/",
         python_script="repeatedkmer.py"
@@ -125,15 +123,12 @@ rule kmc_repeatedkmer:
 
 rule plot_repeated_kmers:
     input:
-        stats1=f"{output_dir}/repeatedkmer_{fasta1}.txt",
-        stats2=f"{output_dir}/repeatedkmer_{fasta2}.txt"
+        stats=f"{output_dir}/repeatedkmer_{{fasta}}.txt"
     output:
-        f"output/plots/{fasta1}_repeatedkmer_plot.png",
-        f"output/plots/{fasta2}_repeatedkmer_plot.png"
+        plot=f"output/plots/{{fasta}}_repeatedkmer_plot.png",
     conda:
         "environment.yml"
     shell:
         """
-        python plot_repeatedkmer.py {input.stats1} {input.stats2} {output[0]} {output[1]}
-
+        python plot_repeatedkmer.py {input.stats} {output.plot} 
         """
