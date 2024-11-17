@@ -16,4 +16,3 @@ fastapath2="$2"
 ./KMC3.2/bin/kmc_dump inter kmcoutput.txt
 
 wc -l kmcoutput.txt
-

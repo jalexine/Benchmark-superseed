@@ -35,4 +35,3 @@ lz4cat "$SD_DBG_FILE" > "${ORIGINAL_FASTA%.*}_SDBG${K_VALUE}_N${N_VALUE}"
 seqkit stats "${ORIGINAL_FASTA%.*}_SDBG${K_VALUE}_N${N_VALUE}" >> "${ORIGINAL_FASTA%.*}_stats.txt"
 
 awk '!seen[$0]++' "${ORIGINAL_FASTA%.*}_combined_stats.txt" > "${ORIGINAL_FASTA%.*}_stats_filtered.txt"
-

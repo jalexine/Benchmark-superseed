@@ -9,7 +9,6 @@ fi
 
 FASTA_FILE="$1"
 
-# Generate FASTA files with seeds using Python script
 for N_VALUE in {2..10}; do
     python3 "$SEED_SCRIPT" "$FASTA_FILE" "$N_VALUE"
 done
