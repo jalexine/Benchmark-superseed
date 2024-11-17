@@ -1,8 +1,9 @@
 import yaml
 
 config = yaml.safe_load(open("config.yaml"))
-
-FASTA_LIST = [config["fasta1"], config["fasta2"], config["fasta3"]]
+N_VALUES = [1, 2, 4, 8] 
+FASTA_LIST = ["test"]
+#FASTA_LIST = [config["fasta1"], config["fasta2"], config["fasta3"]]
 fasta1= [config['fasta1']]
 fasta2= [config['fasta2']]
 
@@ -11,68 +12,21 @@ output_dir = "output/data"
 
 rule all:
     input:
-        expand(f"{output_dir}/repeatedkmer_{{fasta}}.txt", fasta=FASTA_LIST)
+        expand("data/output/{fasta}_N{n}.fa", fasta=FASTA_LIST, n=N_VALUES)
+
 rule superseeds:
     input:
         fasta="data/{fasta}.fa"
     output:
-        expand(f"{output_dir}/{{fasta}}_N{{n}}.fa", fasta="{fasta}", n=n_values)
+        "{output_dir}/{fasta}_N{n}.fa"
     params:
-        dif_script="./difvalues.sh"
-    conda:
-        "environment.yml"
+        seed_executable="bin/superseed" 
     shell:
         """
         mkdir -p {output_dir}
-        {params.dif_script} {input.fasta}
-        mv data/{wildcards.fasta}_N*.fa {output_dir}/
+        {params.seed_executable} {input.fasta} {wildcards.n} > {output}
         """
-
-rule kmc_intersect:
-    input:
-        [f"data/{fasta1}.fa", f"data/{fasta2}.fa"] + expand(f"{output_dir}/{{fasta}}_N{{n}}.fa", fasta=[fasta1, fasta2], n=n_values)
-    output:
-        f"{output_dir}/kmcoutput_{fasta1}_{fasta2}.txt"
-    params:
-        kmc_path="./KMC3.2/bin/"
-    conda:
-        "environment.yml"
-    shell:
-        """
-        mkdir -p {output_dir}
-        {params.kmc_path}kmc -k31 -ci1 -fa {input[0]} kmc_O1 .
-        {params.kmc_path}kmc -k31 -ci1 -fa {input[1]} kmc_O2 .
-        {params.kmc_path}kmc_tools simple kmc_O1 kmc_O2 intersect inter
-        {params.kmc_path}kmc_dump inter {output}
-        rm kmc_O1.kmc_pre kmc_O1.kmc_suf kmc_O2.kmc_pre kmc_O2.kmc_suf inter.kmc_pre inter.kmc_suf
-        """
-
-rule summary_commonkmer:
-    input:
-        f"output/data/kmcoutput_{fasta1}_{fasta2}.txt",  
-        expand(f"{output_dir}/kmcoutput_{{fasta1}}_{{fasta2}}_N{{n}}.txt", fasta1=fasta1, fasta2=fasta2, n=n_values),
-    output:
-        f"summary_{fasta1}_{fasta2}.txt"
-    conda:
-        "environment.yml"
-    shell:
-        """
-        echo "Summary of KMC output line counts:" > {output}
-        for file in {input}; do
-            wc -l $file >> {output}
-        done
-        """
-
-rule plot_commonkmer:
-    input:
-        summary=f"summary_{fasta1}_{fasta2}.txt"
-    output:
-        plot=f"output/plots/{fasta1}_{fasta2}_commonkmer_plot.png"
-    conda:
-        "environment.yml"
-    shell:
-        "python plot_commonkmer.py {input.summary} {output.plot}"
-
+        
 rule sumlen_ggcat:
     input:
         fasta=[f"data/{{fasta}}.fa"] + expand(f"{output_dir}/{{fasta}}_N{{n}}.fa", fasta="{fasta}", n=n_values)
