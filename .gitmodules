@@ -1,3 +1,9 @@
 [submodule "external/kmc"]
 	path = external/kmc
 	url = git@github.com:refresh-bio/KMC.git
+[submodule "external/external/ggcat"]
+	path = external/external/ggcat
+	url = git@github.com:algbio/ggcat.git
+[submodule "external/ggcat"]
+	path = external/ggcat
+	url = git@github.com:algbio/ggcat.git
