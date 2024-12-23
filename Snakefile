@@ -8,21 +8,19 @@ K_VALUES = config["k"]
 
 rule all:
     input:
-        # Statistics files for each FASTA
-        expand("results/stats_repeatedkmer/rstats_{fasta}.txt", fasta=FASTA_FILES),
         # Superfasta files for each combination of FASTA and N
         expand("results/superfasta/{fasta}_N{n}.fa", fasta=FASTA_FILES, n=N_VALUES),
-        # Repeated k-mers plots for each combination of FASTA and K
-        expand("results/plots/repeated_kmers_{fasta}.png", fasta=FASTA_FILES),
-        # Repeated k-mers plots for each combination of FASTA and K
-        expand("results/plots/repeated_kmers_{fasta}_k{k}.png", fasta=FASTA_FILES, k=K_VALUES),
-        # SPSS eulertigs
+        # Repeated Kmer KMC
+        expand("results/repeatedkmers/{fasta}_N{n}_k{k}_repeated.txt", fasta=FASTA_FILES, n=N_VALUES, k=K_VALUES),
+        # Plot repeated Kmer KMC
+        expand("results/plots/{fasta}_repeated_kmers.png", fasta=FASTA_FILES),
+        # SPSS eulertigs ggcat
         expand("results/stats_eulertigs/estats.{fasta}.txt", fasta=FASTA_FILES),
-        # SPSS eulertigs plots for each combination of FASTA and K
-        expand("results/plots/eulertigs_{fasta}_k{k}.png", fasta=FASTA_FILES, k=K_VALUES),
+        #Plot eulertigs ggcat
+        expand("results/plots/{fasta}_eulertigs.png", fasta=FASTA_FILES),
 
 
-
+        
 rule superseed:
     input:
         fasta="data/{fasta}.fa"
@@ -35,64 +33,50 @@ rule superseed:
         mkdir -p results/superfasta  # Ensure the output directory exists
         src/superseed {input.fasta} {params.n} {output}  # Run superseed with input and output
         """
-
-#not efficient here bc we can only 1 core. need to investigate later
-rule aggregate_kmc_stats_per_fasta:
+rule kmc_process:
     input:
-        lambda wildcards: expand("results/superfasta/{fasta}_N{n}.fa", fasta=wildcards.fasta, n=N_VALUES)
+        fasta="results/superfasta/{fasta}_N{n}.fa"
     output:
-        "results/stats_repeatedkmer/rstats_{fasta}.txt"
+        repeated_kmers="results/repeatedkmers/{fasta}_N{n}_k{k}_repeated.txt"
+    params:
+        k="{k}"
     shell:
         """
-        mkdir -p results/stats_repeatedkmer
-        echo "" > {output}  # Initialize the output file
+        mkdir -p results/tmp_kmc_dir results/repeatedkmers
 
-        # Loop through each value of K
-        for k in {config[k]}; do
-            echo ">k${{k}}" >> {output}
-            
-            # Loop through each input file (one per N)
-            for file in {input}; do
-                # Extract the N value from the filename
-                N=$(basename $file | sed 's/.*_N\\([0-9]*\\).fa/\\1/')
-                echo "#N${{N}}" >> {output}
-                
-                # Run KMC for the current K and N values
-                ./external/kmc/bin/kmc -k${{k}} -ci2 -fa $file kmc_output . >> {output}
-                
-                # Clean up temporary KMC files
-                rm -f kmc_output.kmc_suf kmc_output.kmc_pre
-            done
-        done
+        # Run KMC
+        ./external/kmc/bin/kmc -k{params.k} -ci2 -fa {input.fasta} \
+            results/tmp_kmc_dir/kmc_output_{wildcards.fasta}_N{wildcards.n}_k{wildcards.k} .
+
+        # Export k-mers with KMC tools
+        ./external/kmc/bin/kmc_tools transform \
+            results/tmp_kmc_dir/kmc_output_{wildcards.fasta}_N{wildcards.n}_k{wildcards.k} dump \
+            results/tmp_kmc_dir/kmc_dump_{wildcards.fasta}_N{wildcards.n}_k{wildcards.k}.txt
+
+        # Filter with awk to keep only repeated k-mers
+        awk '$2 >= 2' results/tmp_kmc_dir/kmc_dump_{wildcards.fasta}_N{wildcards.n}_k{wildcards.k}.txt > {output}
+
+        # Clean up intermediate files
+        rm -f results/tmp_kmc_dir/kmc_dump_{wildcards.fasta}_N{wildcards.n}_k{wildcards.k}.txt
+        rm -rf results/tmp_kmc_dir
         """
 
 rule plot_repeated_kmers:
     input:
-        stats_file="results/stats_repeatedkmer/rstats_{fasta}.txt"
+        txt_files=lambda wildcards: expand(
+            "results/repeatedkmers/{fasta}_N{n}_k{k}_repeated.txt", 
+            fasta=[wildcards.fasta], 
+            n=N_VALUES, 
+            k=K_VALUES
+        )
     output:
-        plot="results/plots/repeated_kmers_{fasta}.png"
-    params:
-        script="src/plot_repeated_kmers.py"
+        png="results/plots/{fasta}_repeated_kmers.png"
     shell:
         """
-        mkdir -p results/plots  # Ensure the output directory exists
-        python {params.script} {input.stats_file} {output.plot}
+        mkdir -p results/plots
+        python src/plot_repeated_kmers.py {input.txt_files} {output.png}
         """
 
-rule plot_repeated_kmers_perK:
-    input:
-        stats_file="results/stats_repeatedkmer/rstats_{fasta}.txt"
-    output:
-        plot="results/plots/repeated_kmers_{fasta}_k{k}.png"
-    params:
-        script="src/plot_repeated_kmers_perK.py",
-        k="{k}"
-    shell:
-        """
-        mkdir -p results/plots  # Ensure the output directory exists
-        python {params.script} {input.stats_file} -k{params.k} {output.plot}
-        """
-        
 rule stats_eulertigs:
     input:
         superfasta=expand("results/superfasta/{fasta}_N{n}.fa", n=N_VALUES, fasta="{fasta}")
@@ -131,16 +115,18 @@ rule stats_eulertigs:
         rm -rf results/eulertigs
         """
 
-rule plot_eurlitigs:
+rule plot_eulertigs:
     input:
-        stats_file="results/stats_eulertigs/estats.{fasta}.txt"
+        stats="results/stats_eulertigs/estats.{fasta}.txt"
     output:
-        plot="results/plots/eulertigs_{fasta}_k{k}.png"
+        plot="results/plots/{fasta}_eulertigs.png"
     params:
-        script="src/plot_eulertigs_perK.py",
-        k="{k}"
+        k_values=config["k"],
+        n_values=config["n"]
     shell:
         """
-        mkdir -p results/plots  # Ensure the output directory exists
-        python {params.script} {input.stats_file} -k{params.k} {output.plot}
+        mkdir -p results/plots
+
+        # Run the plotting script
+        python src/plot_eulertigs.py {input.stats} {output.plot}
         """

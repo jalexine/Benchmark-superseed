@@ -1,90 +1,56 @@
-import re
 import os
-import sys
-import pandas as pd
 import matplotlib.pyplot as plt
+import sys
 
-# Check for correct usage
-if len(sys.argv) != 3:
-    print("Usage: python script_name.py <input_file> <output_file>")
-    sys.exit(1)
+# Get input files and output file from command line arguments
+input_files = sys.argv[1:-1]
+output_png = sys.argv[-1]
 
-# Get input and output file paths from command line arguments
-input_file = sys.argv[1]
-output_file = sys.argv[2]
+# Initialize a structure to store data
+data = {}
+dataset_name = None  # Variable to store the dataset name
 
-# Extract the base name from the input file for the plot title
-file_name = os.path.basename(input_file)
-base_name = os.path.splitext(file_name)[0].split("_")[-1]  # Extracts the relevant part of the file name
+# Loop through specified input files
+for file_path in input_files:
+    if file_path.endswith("_repeated.txt"):  # Target only relevant files
+        # Extract k and N information from the file name
+        file_name = os.path.basename(file_path)
+        parts = file_name.split("_")
+        fasta = parts[0]  # Example: "ecoli2"
+        n_value = parts[1]  # Example: "N2"
+        k_value = int(parts[2][1:])  # Example: "k31" -> 31
 
-# Initialize a list to store results
-data = []
+        # Set dataset_name from the first file
+        if dataset_name is None:
+            dataset_name = fasta
 
-# Open and read the input file
-with open(input_file, "r") as file:
-    content = file.read()
+        # Count the number of lines in the file to get the repeated k-mer count
+        with open(file_path, "r") as f:
+            repeated_kmers_count = sum(1 for _ in f)
 
-# Split content into sections starting with ">kXX"
-k_sections = re.split(r"(?=>k\d+)", content)
+        # Add data to the dictionary
+        if n_value not in data:
+            data[n_value] = {}
+        data[n_value][k_value] = repeated_kmers_count
 
-if k_sections:
-    print("Extracting repeated k-mers for each k and N...\n")
-    for k_section in k_sections:
-        # Match the `k` value (e.g., k21, k31)
-        k_match = re.match(r">k(\d+)", k_section)
-        if k_match:
-            k_value = int(k_match.group(1))  # k value as an integer
-            
-            # Find all `#N` blocks within the section
-            n_blocks = re.split(r"(?=#N\d+)", k_section)
-            for n_block in n_blocks:
-                n_match = re.match(r"#N(\d+)", n_block)
-                if n_match:
-                    n_value = int(n_match.group(1))  # N value as an integer
-                    
-                    # Extract stats from the block
-                    unique_kmers_match = re.search(r"No\. of unique k-mers\s+:\s+(\d+)", n_block)
-                    total_kmers_match = re.search(r"Total no\. of k-mers\s+:\s+(\d+)", n_block)
-                    
-                    if unique_kmers_match and total_kmers_match:
-                        unique_kmers = int(unique_kmers_match.group(1))
-                        total_kmers = int(total_kmers_match.group(1))
-                        repeated_kmers = total_kmers - unique_kmers
-                        
-                        # Append data to the list
-                        data.append({
-                            "k": k_value,
-                            "N": n_value,
-                            "Repeated k-mers": repeated_kmers
-                        })
-else:
-    print("No sections found in the file.")
-    sys.exit(1)
+# Prepare data for plotting
+sorted_k_values = sorted({k for n_data in data.values() for k in n_data.keys()})
+n_values = sorted(data.keys())
 
-# Create a DataFrame
-df = pd.DataFrame(data)
-
-# Plot repeated k-mers vs k for each N
+# Plot the data
 plt.figure(figsize=(10, 6))
+for n_value in n_values:
+    counts = [data[n_value].get(k, 0) for k in sorted_k_values]
+    plt.plot(sorted_k_values, counts, marker="o", label=n_value)
 
-for n_value in df["N"].unique():
-    subset = df[df["N"] == n_value]
-    # Plot the curve
-    plt.plot(subset["k"], subset["Repeated k-mers"], label=f"N{n_value}")
-    # Add points
-    plt.scatter(subset["k"], subset["Repeated k-mers"])
-
-# Set x-axis ticks (specific k values)
-plt.xticks(sorted(df["k"].unique()))  # Show only k values present in the data
-
+# Add plot details
+plt.title(f"{dataset_name}" if dataset_name else "Repeated k-mers")
 plt.xlabel("k")
-plt.ylabel("Repeated k-mers")
-plt.title(f"{base_name}")
+plt.ylabel("Number of repeated k-mers")
+plt.xticks(sorted_k_values)  # Explicit x-axis values
 plt.legend(title="N values")
 plt.grid(True)
 
-# Save the plot as a PNG file
-plt.savefig(output_file)
-
-
-print(f"Graph saved as {output_file}")
+# Save the plot as PNG
+plt.savefig(output_png)
+print(f"Plot saved to {output_png}")
