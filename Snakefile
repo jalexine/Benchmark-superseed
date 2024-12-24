@@ -18,7 +18,12 @@ rule all:
         expand("results/stats_eulertigs/estats.{fasta}.txt", fasta=FASTA_FILES),
         #Plot eulertigs ggcat
         expand("results/plots/{fasta}_eulertigs.png", fasta=FASTA_FILES),
-
+        #Indexing with SShash
+        expand("results/sshash/{fasta}_N{n}_k{k}.log", fasta=FASTA_FILES, n=N_VALUES, k=K_VALUES),
+        expand("results/sshash/{fasta}_N{n}_k{k}.index", fasta=FASTA_FILES, n=N_VALUES, k=K_VALUES),
+        expand("results/sshash/stats/{fasta}_summary.txt", fasta=FASTA_FILES),
+        #Plot sizes SShash
+        expand("results/plots/{fasta}_sizes_SShash.png", fasta=FASTA_FILES),
 
         
 rule superseed:
@@ -83,9 +88,9 @@ rule stats_eulertigs:
     output:
         stats="results/stats_eulertigs/estats.{fasta}.txt"
     params:
-        k_values=config["k"],  # List of k values
-        n_values=config["n"],  # List of n values
-        threads=8  # Number of threads
+        k_values=config["k"],
+        n_values=config["n"],
+        threads=8
     shell:
         """
         mkdir -p results/eulertigs results/stats_eulertigs
@@ -129,4 +134,50 @@ rule plot_eulertigs:
 
         # Run the plotting script
         python src/plot_eulertigs.py {input.stats} {output.plot}
+        """
+
+#not sure abt the command line here + need to remove log/index later
+rule sshash_build:
+    input:
+        fasta="results/superfasta/{fasta}_N{n}.fa"
+    output:
+        log="results/sshash/{fasta}_N{n}_k{k}.log",
+        index="results/sshash/{fasta}_N{n}_k{k}.index"
+    params:
+        k="{k}",
+        m=15,
+        seed=54321 
+    shell:
+        """
+        mkdir -p results/sshash
+        ./external/sshash/build/sshash build -i {input.fasta} -k {params.k} -m {params.m} -s {params.seed} -o {output.index} > {output.log}
+        """
+
+rule extract_sizes:
+    input:
+        log=expand("results/sshash/{fasta}_N{n}_k{k}.log", fasta="{fasta}", n=N_VALUES, k=K_VALUES)
+    output:
+        summary="results/sshash/stats/{fasta}_summary.txt"
+    shell:
+        """
+        mkdir -p results/sshash/stats
+
+        echo "N,k,Size_MB" > {output.summary}
+        for log in {input.log}; do
+            n=$(basename ${{log}} | cut -d'_' -f2 | sed 's/N//')
+            k=$(basename ${{log}} | cut -d'_' -f3 | sed 's/k//')
+            size=$(grep "total index size" ${{log}} | awk '{{print $(NF-1)}}')
+            echo "${{n}},${{k}},${{size}}" >> {output.summary}
+        done
+        """
+
+rule plot_summary_SShah:
+    input:
+        summary="results/sshash/stats/{fasta}_summary.txt"
+    output:
+        plot="results/plots/{fasta}_sizes_SShash.png"
+    shell:
+        """
+        mkdir -p results/plots
+        python src/plot_sshash.py {input.summary} {output.plot}
         """
